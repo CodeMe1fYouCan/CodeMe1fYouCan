@@ -11,26 +11,39 @@
 
 (function() {
     'use strict';
-  main();
+    // For initial/new page loads
+    waitForAndRemoveSuggestedVideos();
+
+    // YT appends to the URL, forgoing page loads, when clicking down the YT rabbit hole.
+    // This means we need to continuously detect these events as userscripts are only run once on page load.
+    // The below creates an observer on URL changes and attempts to remove the elements on the new video.
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      const url = location.href;
+      if (url !== lastUrl) {
+        lastUrl = url;
+        waitForAndRemoveSuggestedVideos();
+      }
+    }).observe(document, {subtree: true, childList: true});
 })();
 
-async function main() {
+async function waitForAndRemoveSuggestedVideos() {
   await waitForYTVideoElementsToLoad();
   removeYTVideoElements();
 }
 
-// Wait for the ytb-ce elements we want to delete to load
+// Wait for the ytb-ce elements we want to remove to load
 async function waitForYTVideoElementsToLoad() {
   var numWaits = 0;
-  var elements = document.querySelectorAll(".ytp-ce-element");
-  while(elements == null || !elements.length) {
-    // Only wait 3 seconds. There may not be any elements to delete in the first place.
+  var suggestedVideoElements = document.querySelectorAll(".ytp-ce-element");
+  while(suggestedVideoElements == null || !suggestedVideoElements.length) {
+    // Only wait 3 seconds. There may not be any elements to remove in the first place.
     if (numWaits >= 3) {
       break;
     }
 
     await new Promise(r => setTimeout(r, 1000));
-    elements = document.querySelectorAll(".ytp-ce-element");
+    suggestedVideoElements = document.querySelectorAll(".ytp-ce-element");
     numWaits++;
   }
 }
